@@ -220,6 +220,7 @@
         let app, auth, db, storage;
         let currentUser = null; // Firebase auth user object
         let currentUserData = null; // Our user doc from Firestore
+        let isFirebaseInitialized = false; // Add a flag
         
         // Global state for current chat context
         let currentChatContext = { type: null, id: null, name: null }; // type: 'dm' | 'server'
@@ -378,16 +379,22 @@
          */
         function initializeFirebase() {
             try {
+                // Check if config is empty
+                if (Object.keys(firebaseConfig).length === 0) {
+                    throw new Error("Firebase configuration is missing.");
+                }
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 storage = getStorage(app);
                 setLogLevel('Debug');
                 console.log("Firebase initialized.");
+                isFirebaseInitialized = true; // Set flag on success
             } catch (e) {
                 console.error("Firebase initialization error:", e);
                 showView('auth');
-                showAuthError('login', 'Error connecting to services.');
+                showAuthError('login', 'Fatal Error: Could not connect to services. Please refresh.');
+                isFirebaseInitialized = false; // Ensure flag is false
             }
         }
 
@@ -396,7 +403,11 @@
          */
         function main() {
             initializeFirebase();
-            if (!auth) return;
+            // STOP if Firebase failed to init
+            if (!isFirebaseInitialized || !auth) {
+                console.error("Firebase not initialized. Stopping main execution.");
+                return; 
+            }
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
@@ -479,6 +490,12 @@
          */
         async function handleSignup() {
             clearAuthErrors();
+            // Add guard at the top
+            if (!isFirebaseInitialized || !auth || !db) {
+                showAuthError('signup', 'Error: Services not connected. Please refresh.');
+                return;
+            }
+            
             const email = $("signup-email").value.toLowerCase(); // Normalize email
             const password = $("signup-password").value;
             const displayName = $("signup-displayname").value.trim();
@@ -527,6 +544,12 @@
          */
         async function handleLogin() {
             clearAuthErrors();
+            // Add guard at the top
+            if (!isFirebaseInitialized || !auth) {
+                showAuthError('login', 'Error: Services not connected. Please refresh.');
+                return;
+            }
+            
             const email = $("login-email").value.toLowerCase(); // Normalize email
             const password = $("login-password").value;
 
