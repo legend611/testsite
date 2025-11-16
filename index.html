@@ -1,1087 +1,246 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Functional Chat App</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Custom Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { 'inter': ['Inter', 'sans-serif'] },
-                    colors: {
-                        'chat-gray-900': '#202225', 'chat-gray-800': '#2f3136',
-                        'chat-gray-700': '#36393f', 'chat-gray-600': '#40444b',
-                        'chat-gray-500': '#72767d', 'chat-gray-400': '#b9bbbe',
-                        'chat-gray-300': '#dcddde', 'chat-blurple': '#5865F2',
-                        'chat-green': '#57F287', 'chat-red': '#ED4245',
-                    }
-                }
-            }
-        }
-    </script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Discord Clone — HTML Only</title>
+  <meta name="description" content="Static Discord-style mockup (HTML + embedded CSS) — ready for GitHub Pages" />
+  <style>
+    :root{
+      --bg:#0e1116; --sidebar:#11141a; --accent:#5865f2;
+      --muted:#99a1b3; --panel:#15181d; --text:#e6eef6;
+      --server:#2f3136;
+      font-family: "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b0d10 0%, #0e1116 100%);color:var(--text)}
+    .app{
+      display:grid;
+      grid-template-columns:72px 240px 1fr 320px;
+      gap:12px;
+      height:100vh;
+      padding:12px;
+    }
 
-    <!-- Custom Styles -->
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #2f3136; }
-        ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
-        .modal { transition: opacity 0.25s ease; }
-        .modal-content { transition: transform 0.25s ease; }
-    </style>
+    /* Left-most server column */
+    .servers{
+      background:linear-gradient(180deg,var(--server),#0f1113);
+      border-radius:12px;
+      padding:8px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:center;
+    }
+    .server{
+      width:48px;height:48px;border-radius:50%;
+      background:#36393f;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;
+      box-shadow:0 2px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+      cursor:pointer;text-decoration:none;
+    }
+    .server.plus{background:linear-gradient(180deg,#2b2f36,#1d2024);font-size:22px}
+
+    .servers hr{width:36px;border:0;border-top:1px solid rgba(255,255,255,0.03);margin:6px 0}
+
+    /* Server sidebar (guild channels) */
+    .sidebar{
+      background:var(--sidebar);
+      border-radius:12px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+    }
+    .guild-header{display:flex;align-items:center;gap:8px;padding:8px 4px;color:var(--muted)}
+    .guild-name{font-weight:700;color:var(--text)}
+    .search{
+      margin:8px 0;padding:8px;border-radius:8px;background:#0c0f12;color:var(--muted);border:1px solid rgba(255,255,255,0.02);
+      font-size:14px;
+    }
+
+    .channels{overflow:auto;padding:6px 0;flex:1}
+    .category{color:var(--muted);font-size:12px;margin:10px 6px 6px;text-transform:uppercase;letter-spacing:0.08em}
+    .channel{
+      padding:8px 10px;margin:4px;border-radius:6px;color:#cfd8e8;
+      display:flex;gap:8px;align-items:center;font-size:14px;text-decoration:none;
+    }
+    .channel:hover{background:rgba(255,255,255,0.02)}
+    .channel .hash{color:var(--muted);font-weight:700}
+
+    /* Main panel */
+    .main{
+      background:var(--panel);
+      border-radius:12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main .top{
+      padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.02);
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .main .top .title{font-weight:700}
+    .messages{
+      padding:16px;flex:1;overflow:auto;background:
+      linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0));
+    }
+
+    /* Message bubbles */
+    .message{
+      display:flex;gap:12px;margin-bottom:14px;
+    }
+    .avatar{
+      width:40px;height:40px;border-radius:8px;background:#2e6bff;flex:0 0 40px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;
+    }
+    .msg-body{background:rgba(255,255,255,0.02);padding:10px 12px;border-radius:8px;max-width:65%}
+    .msg-header{font-weight:700;font-size:14px;color:var(--text);display:flex;gap:8px;align-items:center}
+    .msg-time{color:var(--muted);font-size:12px;font-weight:500}
+    .msg-text{color:#dbe9ff;margin-top:6px;line-height:1.4}
+
+    /* Right column (members, threads) */
+    .right{
+      background:linear-gradient(180deg,#0f1317,#0c0f12);
+      border-radius:12px;padding:12px;display:flex;flex-direction:column;
+    }
+    .members-title{font-weight:700;color:var(--muted);margin-bottom:8px}
+    .member{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px}
+    .member .m-avatar{width:36px;height:36px;border-radius:8px;background:#7289da;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    .member .m-name{font-weight:600}
+    .member .m-presence{font-size:12px;color:var(--muted)}
+
+    /* Bottom input bar (static, non-functional) */
+    .composer{
+      padding:10px;border-top:1px solid rgba(255,255,255,0.02);display:flex;gap:8px;align-items:center;background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent)
+    }
+    .input{
+      flex:1;padding:10px;border-radius:10px;background:#0b0d10;border:1px solid rgba(255,255,255,0.02);color:var(--muted)
+    }
+    .btn{
+      padding:8px 10px;border-radius:8px;background:linear-gradient(180deg,var(--accent),#4854d8);color:white;font-weight:700;border:none;cursor:pointer
+    }
+
+    /* Footer note */
+    .note{font-size:13px;color:var(--muted);padding-top:12px}
+
+    /* Responsive */
+    @media (max-width:980px){
+      .app{grid-template-columns:72px 220px 1fr}
+      .right{display:none}
+    }
+    @media (max-width:700px){
+      .app{grid-template-columns:64px 1fr}
+      .sidebar{display:none}
+    }
+
+    /* Make scrollbar subtle */
+    .channels::-webkit-scrollbar, .messages::-webkit-scrollbar {height:8px;width:8px}
+    .channels::-webkit-scrollbar-thumb, .messages::-webkit-scrollbar-thumb {background:rgba(255,255,255,0.03);border-radius:8px}
+  </style>
 </head>
-<body class="bg-chat-gray-900 text-chat-gray-300">
+<body>
+  <div class="app" role="application">
 
-    <!-- App Loading Spinner -->
-    <div id="loading-spinner" class="fixed inset-0 bg-chat-gray-900 bg-opacity-80 flex items-center justify-center z-50">
-        <div class="w-16 h-16 border-4 border-chat-blurple border-t-transparent rounded-full animate-spin"></div>
-        <span class="ml-4 text-white text-xl">Loading...</span>
-    </div>
+    <nav class="servers" aria-label="Servers">
+      <a class="server" href="#" title="Discord">D</a>
+      <a class="server" href="#" title="Server 1">A</a>
+      <a class="server" href="#" title="Server 2">B</a>
+      <hr />
+      <a class="server plus" href="#" title="Add">+</a>
+    </nav>
 
-    <!-- Auth View (Login / Signup) -->
-    <div id="auth-view" class="h-screen w-full flex items-center justify-center bg-chat-gray-800" style="display: none;">
-        <div class="bg-chat-gray-700 p-8 rounded-lg shadow-xl w-full max-w-md">
-            <!-- Login Form -->
-            <div id="login-form">
-                <h2 class="text-3xl font-bold text-white mb-6 text-center">Welcome Back!</h2>
-                <div id="login-error" class="text-chat-red mb-4 hidden"></div>
-                <input id="login-email" type="email" placeholder="Your Email" class="w-full p-3 mb-4 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-                <input id="login-password" type="password" placeholder="Password" class="w-full p-3 mb-6 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-                <button id="login-btn" class="w-full p-3 bg-chat-blurple text-white rounded-md font-semibold hover:bg-opacity-80 transition-colors">Login</button>
-                <p class="text-center text-chat-gray-500 mt-4">
-                    Need an account? <button id="show-signup-btn" class="text-chat-blurple hover:underline">Register</button>
-                </p>
-            </div>
-            <!-- Signup Form -->
-            <div id="signup-form" style="display: none;">
-                <h2 class="text-3xl font-bold text-white mb-6 text-center">Create an Account</h2>
-                <div id="signup-error" class="text-chat-red mb-4 hidden"></div>
-                <input id="signup-email" type="email" placeholder="Email" class="w-full p-3 mb-4 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-                <input id="signup-displayname" type="text" placeholder="Display Name (e.g., CoolUser)" class="w-full p-3 mb-4 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-                <input id="signup-password" type="password" placeholder="Password" class="w-full p-3 mb-6 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-                <button id="signup-btn" class="w-full p-3 bg-chat-blurple text-white rounded-md font-semibold hover:bg-opacity-80 transition-colors">Sign Up</button>
-                <p class="text-center text-chat-gray-500 mt-4">
-                    Already have an account? <button id="show-login-btn" class="text-chat-blurple hover:underline">Login</button>
-                </p>
-            </div>
+    <aside class="sidebar" aria-label="Channel list">
+      <div class="guild-header">
+        <div style="width:36px;height:36px;border-radius:8px;background:#2f3438;display:flex;align-items:center;justify-content:center;font-weight:700">G</div>
+        <div>
+          <div class="guild-name">Guild Name</div>
+          <div style="font-size:12px;color:var(--muted)">Welcome to the server</div>
         </div>
-    </div>
+      </div>
 
-    <!-- Main App View -->
-    <div id="app-view" class="flex h-screen w-full" style="display: none;">
-        
-        <!-- Column 1: Server List -->
-        <nav class="w-20 flex-shrink-0 bg-chat-gray-900 p-3 space-y-3 overflow-y-auto">
-            <!-- DMs Button -->
-            <button id="dm-home-btn" class="h-12 w-12 bg-chat-gray-700 hover:bg-chat-blurple rounded-full flex items-center justify-center text-white text-2xl transition-all duration-200 ease-in-out hover:rounded-2xl" title="Direct Messages">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A18.75 18.75 0 0112 22.5c-5.35 0-10.038-2.68-13.125-6.75A18.75 18.75 0 014.501 20.118z" /></svg>
-            </button>
-            <div class="h-px w-8 bg-chat-gray-700 mx-auto"></div>
-            <!-- Server List (Dynamic) -->
-            <div id="server-list" class="space-y-3"></div>
-            <!-- Add Server Button -->
-            <button id="add-server-btn" class="h-12 w-12 bg-chat-gray-700 hover:bg-chat-green rounded-full flex items-center justify-center text-chat-green hover:text-white text-2xl transition-all duration-200 ease-in-out hover:rounded-2xl" title="Add a Server">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            </button>
-        </nav>
+      <input class="search" placeholder="Find or start a conversation" aria-label="Search" />
 
-        <!-- Column 2: Channel / DM List -->
-        <aside class="w-64 flex-shrink-0 bg-chat-gray-800 flex flex-col">
-            <!-- Header -->
-            <header class="h-12 shadow-md border-b border-chat-gray-900 px-4 flex items-center justify-between">
-                <h2 id="channel-list-header" class="font-bold text-white text-lg truncate">Direct Messages</h2>
-            </header>
-            
-            <!-- DM List View -->
-            <div id="dm-list-view" class="flex-1 overflow-y-auto p-2 space-y-1">
-                <button id="start-dm-btn" class="w-full text-left px-2 py-1.5 text-chat-gray-400 hover:text-white hover:bg-chat-gray-700 rounded-md">Start a new DM</button>
-                <div id="dm-list" class="space-y-1"></div>
-            </div>
-            
-            <!-- Server/Channel List View (hidden by default) -->
-            <div id="channel-list-view" class="flex-1 overflow-y-auto p-2 space-y-1" style="display: none;">
-                <div class="px-2 pt-2"><h3 class="text-xs font-semibold uppercase text-chat-gray-500">Text Channels</h3></div>
-                <!-- Hardcoded 'general' channel for simplicity -->
-                <a href="#" id="general-channel" class="group flex items-center px-2 py-1.5 text-white bg-chat-gray-600 rounded-md">
-                    <svg class="w-5 h-5 text-chat-gray-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5-3.9 19.5m-2.1-19.5-3.9 19.5" /></svg>
-                    <span class="font-medium">general</span>
-                </a>
-            </div>
+      <div class="channels" role="navigation" aria-label="Channels">
+        <div class="category">Text Channels</div>
+        <a class="channel" href="#"><span class="hash">#</span> <span>general</span></a>
+        <a class="channel" href="#"><span class="hash">#</span> <span>announcements</span></a>
+        <a class="channel" href="#"><span class="hash">#</span> <span>random</span></a>
 
-            <!-- User Panel -->
-            <footer class="h-14 bg-chat-gray-900 p-2 flex justify-between items-center">
-                <div class="flex items-center space-x-2 overflow-hidden">
-                    <div class="relative"><img src="https://placehold.co/32x32/7289DA/FFFFFF?text=?" alt="Avatar" class="rounded-full w-8 h-8"></div>
-                    <div>
-                        <h4 id="user-panel-name" class="text-white font-semibold text-sm truncate">User</h4>
-                        <p id="user-panel-email" class="text-chat-gray-500 text-xs truncate">email@example.com</p>
-                    </div>
-                </div>
-                <button id="logout-btn" class="w-8 h-8 flex items-center justify-center text-chat-gray-400 hover:text-white hover:bg-chat-gray-700 rounded-md" title="Logout">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
-                </button>
-            </footer>
-        </aside>
+        <div class="category">Voice Channels</div>
+        <a class="channel" href="#"><span class="hash">🔊</span> <span>Lobby</span></a>
 
-        <!-- Column 3: Main Chat -->
-        <main class="flex-1 flex flex-col bg-chat-gray-700">
-            <!-- Channel Header -->
-            <header class="h-12 shadow-md border-b border-chat-gray-900 px-4 flex items-center justify-between">
-                <div class="flex items-center">
-                    <svg class="w-6 h-6 text-chat-gray-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5-3.9 19.5m-2.1-19.5-3.9 19.5" /></svg>
-                    <h2 id="chat-header-name" class="font-bold text-white text-lg">Select a chat</h2>
-                </div>
-            </header>
-            <!-- Chat Messages -->
-            <div id="messages-list" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Messages will be dynamically inserted here -->
-                <div class="flex justify-center items-center h-full">
-                    <p class="text-chat-gray-500">Select a server or DM to start chatting.</p>
-                </div>
-            </div>
-            <!-- Chat Input -->
-            <footer class="h-16 p-4" id="chat-input-footer" style="display: none;">
-                <div class="bg-chat-gray-600 rounded-lg flex items-center px-4">
-                    <input type="file" id="file-upload-input" class="hidden">
-                    <button id="file-upload-btn" class="text-chat-gray-400 hover:text-white" title="Attach File">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94a3 3 0 114.243 4.242l-9.086 9.086a1.5 1.5 0 01-2.121-2.121l7.693-7.693-2.121-2.121z" /></svg>
-                    </button>
-                    <input id="message-input" type="text" placeholder="Message..." class="flex-1 bg-transparent p-3 text-white placeholder-chat-gray-500 focus:outline-none">
-                    <button id="send-btn" class="text-chat-blurple hover:opacity-80 font-semibold p-2">Send</button>
-                </div>
-                <div id="file-upload-progress" class="text-xs text-chat-gray-300 mt-1 hidden">Uploading: <span>0</span>%</div>
-            </footer>
-        </main>
+        <div class="category">People</div>
+        <a class="channel" href="#"><span class="hash">👥</span> <span>Members</span></a>
+      </div>
+    </aside>
 
-        <!-- Column 4: User List (Dynamic) -->
-        <aside id="user-list-aside" class="w-60 flex-shrink-0 bg-chat-gray-700 p-3 space-y-4 overflow-y-auto hidden lg:block border-l border-chat-gray-800">
-            <h3 id="user-list-header" class="text-xs font-semibold uppercase text-chat-gray-500 tracking-wider mb-2">Members</h3>
-            <div id="user-list" class="space-y-3">
-                <!-- User list will be dynamically inserted here -->
-            </div>
-        </aside>
-    </div>
-
-    <!-- Modal: Add Server -->
-    <div id="add-server-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden opacity-0">
-        <div class="modal-content bg-chat-gray-700 p-6 rounded-lg shadow-xl w-full max-w-sm -translate-y-10">
-            <h2 class="text-2xl font-bold text-white mb-4">Create Your Server</h2>
-            <p class="text-chat-gray-400 mb-4">Give your new server a name.</p>
-            <input id="server-name-input" type="text" placeholder="My Awesome Server" class="w-full p-3 mb-4 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-            <div class="flex justify-end space-x-2">
-                <button id="cancel-add-server-btn" class="px-4 py-2 bg-transparent text-chat-gray-300 rounded-md hover:bg-chat-gray-600">Cancel</button>
-                <button id="confirm-add-server-btn" class="px-4 py-2 bg-chat-blurple text-white rounded-md font-semibold hover:bg-opacity-80">Create</button>
-            </div>
+    <main class="main" aria-label="Messages">
+      <div class="top">
+        <div>
+          <div class="title"># general</div>
+          <div style="font-size:13px;color:var(--muted)">A place for general discussion</div>
         </div>
-    </div>
-
-    <!-- Modal: Start DM -->
-    <div id="start-dm-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden opacity-0">
-        <div class="modal-content bg-chat-gray-700 p-6 rounded-lg shadow-xl w-full max-w-sm -translate-y-10">
-            <h2 class="text-2xl font-bold text-white mb-4">Start a New DM</h2>
-            <p class="text-chat-gray-400 mb-4">Enter the email address of the user you want to chat with.</p>
-            <div id="dm-error" class="text-chat-red mb-4 hidden"></div>
-            <input id="dm-email-input" type="email" placeholder="user@example.com" class="w-full p-3 mb-4 bg-chat-gray-800 rounded-md text-white placeholder-chat-gray-500 focus:outline-none focus:ring-2 focus:ring-chat-blurple">
-            <div class="flex justify-end space-x-2">
-                <button id="cancel-start-dm-btn" class="px-4 py-2 bg-transparent text-chat-gray-300 rounded-md hover:bg-chat-gray-600">Cancel</button>
-                <button id="confirm-start-dm-btn" class="px-4 py-2 bg-chat-blurple text-white rounded-md font-semibold hover:bg-opacity-80">Find User</button>
-            </div>
+        <div style="display:flex;gap:8px;align-items:center;color:var(--muted)">
+          <span>Members</span>
+          <div style="width:36px;height:36px;border-radius:8px;background:#2f6bff;display:flex;align-items:center;justify-content:center">U</div>
         </div>
-    </div>
+      </div>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        // --- FIREBASE IMPORTS ---
-        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import {
-            getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged,
-            createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import {
-            getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot,
-            collection, query, where, getDocs, Timestamp, serverTimestamp, arrayUnion
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import {
-            getStorage, ref, uploadBytesResumable, getDownloadURL
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+      <div class="messages" aria-live="polite" role="log">
+        <div class="message">
+          <div class="avatar">AL</div>
+          <div>
+            <div class="msg-body">
+              <div class="msg-header">
+                <div>Alice</div>
+                <div class="msg-time">Today • 10:42 AM</div>
+              </div>
+              <div class="msg-text">Hey everyone — welcome to the server! This is a simple static demo made with HTML and CSS only.</div>
+            </div>
+          </div>
+        </div>
 
-        // --- GLOBAL CONFIG & APP STATE ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        <div class="message">
+          <div class="avatar" style="background:#00b894">BO</div>
+          <div>
+            <div class="msg-body">
+              <div class="msg-header">
+                <div>Bob</div>
+                <div class="msg-time">Today • 10:45 AM</div>
+              </div>
+              <div class="msg-text">Nice! No JavaScript here — everything you see is pure HTML/CSS. Replace content to customize.</div>
+            </div>
+          </div>
+        </div>
 
-        let app, auth, db, storage;
-        let currentUser = null; // Firebase auth user object
-        let currentUserData = null; // Our user doc from Firestore
-        let isFirebaseInitialized = false; // Flag to track initialization
-        
-        // Global state for current chat context
-        let currentChatContext = { type: null, id: null, name: null }; // type: 'dm' | 'server'
-        let currentMessageListener = null; // Function to unsubscribe from onSnapshot
-        let allUsers = new Map(); // Cache for all user data (displayName, etc.)
+        <div class="message">
+          <div class="avatar" style="background:#6c5ce7">ME</div>
+          <div>
+            <div class="msg-body">
+              <div class="msg-header">
+                <div>Me</div>
+                <div class="msg-time">Today • 10:46 AM</div>
+              </div>
+              <div class="msg-text">Try resizing the window to see the responsive layout. Mobile hides the right panel and channels.</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        // --- DOM ELEMENTS ---
-        const $ = (selector) => document.getElementById(selector);
-        
-        const views = {
-            loading: $("loading-spinner"),
-            auth: $("auth-view"),
-            app: $("app-view")
-        };
-        const authForms = {
-            login: $("login-form"),
-            signup: $("signup-form"),
-            loginError: $("login-error"),
-            signupError: $("signup-error")
-        };
-        const appUI = {
-            serverList: $("server-list"),
-            dmHomeBtn: $("dm-home-btn"),
-            addServerBtn: $("add-server-btn"),
-            channelListHeader: $("channel-list-header"),
-            dmListView: $("dm-list-view"),
-            channelListView: $("channel-list-view"),
-            dmList: $("dm-list"),
-            startDmBtn: $("start-dm-btn"),
-            userPanelName: $("user-panel-name"),
-            userPanelEmail: $("user-panel-email"),
-            logoutBtn: $("logout-btn"),
-            chatHeaderName: $("chat-header-name"),
-            messagesList: $("messages-list"),
-            chatInputFooter: $("chat-input-footer"),
-            messageInput: $("message-input"),
-            sendBtn: $("send-btn"),
-            fileUploadBtn: $("file-upload-btn"),
-            fileUploadInput: $("file-upload-input"),
-            fileUploadProgress: $("file-upload-progress"),
-            userListAside: $("user-list-aside"),
-            userListHeader: $("user-list-header"),
-            userList: $("user-list")
-        };
-        const modals = {
-            addServer: $("add-server-modal"),
-            serverNameInput: $("server-name-input"),
-            confirmAddServerBtn: $("confirm-add-server-btn"),
-            cancelAddServerBtn: $("cancel-add-server-btn"),
-            
-            startDm: $("start-dm-modal"),
-            dmEmailInput: $("dm-email-input"),
-            confirmStartDmBtn: $("confirm-start-dm-btn"),
-            cancelStartDmBtn: $("cancel-start-dm-btn"),
-            dmError: $("dm-error")
-        };
+      <div class="composer" aria-label="Message composer">
+        <input class="input" placeholder="Message #general" aria-label="Message input" />
+        <button class="btn" aria-label="Send">Send</button>
+      </div>
+    </main>
 
-        // --- UTILITY FUNCTIONS ---
-        
-        /**
-         * Shows a specific view and hides others
-         * @param {('loading' | 'auth' | 'app')} viewName 
-         */
-        function showView(viewName) {
-            Object.values(views).forEach(view => view.style.display = 'none');
-            if (views[viewName]) {
-                views[viewName].style.display = 'flex';
-            }
-            if(viewName === 'auth') {
-                views.auth.style.display = 'flex';
-            }
-        }
+    <aside class="right" aria-label="Members">
+      <div class="members-title">Online — 3</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="member"><div class="m-avatar">AL</div><div><div class="m-name">Alice</div><div class="m-presence">Online</div></div></div>
+        <div class="member"><div class="m-avatar" style="background:#00b894">BO</div><div><div class="m-name">Bob</div><div class="m-presence">Idle</div></div></div>
+        <div class="member"><div class="m-avatar" style="background:#6c5ce7">ME</div><div><div class="m-name">Me</div><div class="m-presence">Do Not Disturb</div></div></div>
+      </div>
+      <div class="note">You are viewing a static mockup. Interactivity requires JavaScript and a backend.</div>
+    </aside>
 
-        /**
-         * Toggles a modal's visibility
-         * @param {HTMLElement} modal 
-         * @param {boolean} show 
-         */
-        function toggleModal(modal, show) {
-            if (show) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    modal.classList.remove('opacity-0');
-                    modal.querySelector('.modal-content').classList.remove('-translate-y-10');
-                }, 10);
-            } else {
-                modal.classList.add('opacity-0');
-                modal.querySelector('.modal-content').classList.add('-translate-y-10');
-                setTimeout(() => modal.classList.add('hidden'), 250);
-            }
-        }
-
-        /**
-         * Formats a Firebase Timestamp to a readable string
-         * @param {Timestamp} timestamp 
-         */
-        function formatTimestamp(timestamp) {
-            if (!timestamp) return '...';
-            const date = timestamp.toDate();
-            return date.toLocaleString();
-        }
-
-        /**
-         * Displays an error message in the specified auth form
-         * @param {('login' | 'signup' | 'dm')} form 
-         * @param {string} message 
-         */
-        function showAuthError(form, message) {
-            let el;
-            if (form === 'login') el = authForms.loginError;
-            else if (form === 'signup') el = authForms.signupError;
-            else if (form === 'dm') el = modals.dmError;
-            
-            if (el) {
-                el.textContent = message;
-                el.classList.remove('hidden');
-            }
-        }
-        
-        /**
-         * Clears all auth error messages
-         */
-        function clearAuthErrors() {
-            authForms.loginError.classList.add('hidden');
-            authForms.signupError.classList.add('hidden');
-            modals.dmError.classList.add('hidden');
-        }
-
-        /**
-         * Fetches user data from cache or Firestore
-         * @param {string} uid 
-         */
-        async function getUserData(uid) {
-            if (allUsers.has(uid)) {
-                return allUsers.get(uid);
-            }
-            try {
-                // This path points to the user's public info doc
-                const userRef = doc(db, `/artifacts/${appId}/users/${uid}`);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                    const data = userSnap.data();
-                    allUsers.set(uid, data);
-                    return data;
-                }
-            } catch (e) {
-                console.error("Error getting user data:", e);
-            }
-            return { displayName: 'Unknown User' };
-        }
-
-        // --- FIREBASE INITIALIZATION & AUTH ---
-
-        /**
-         * Initialize Firebase app and services
-         */
-        function initializeFirebase() {
-            try {
-                // Check if config is empty (FIX for 'app' undefined)
-                if (Object.keys(firebaseConfig).length === 0) {
-                    throw new Error("Firebase configuration is missing.");
-                }
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                storage = getStorage(app);
-                setLogLevel('Debug');
-                console.log("Firebase initialized.");
-                isFirebaseInitialized = true; // Set flag on success
-            } catch (e) {
-                console.error("Firebase initialization error:", e);
-                showView('auth');
-                showAuthError('login', 'Fatal Error: Could not connect to services. Please refresh.');
-                isFirebaseInitialized = false; // Ensure flag is false
-            }
-        }
-
-        /**
-         * Main app entry point. Sets up auth listener.
-         */
-        function main() {
-            initializeFirebase();
-            // STOP if Firebase failed to init (FIX for 'app' undefined)
-            if (!isFirebaseInitialized || !auth) {
-                console.error("Firebase not initialized. Stopping main execution.");
-                return; 
-            }
-
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    currentUser = user;
-                    // Path to the user's document
-                    const userRef = doc(db, `/artifacts/${appId}/users/${user.uid}`);
-                    const userSnap = await getDoc(userRef);
-
-                    if (userSnap.exists()) {
-                        // User doc exists, proceed normally
-                        currentUserData = userSnap.data();
-                        allUsers.set(user.uid, currentUserData); // Cache self
-                        console.log("User logged in:", currentUserData.displayName);
-                        await initializeAppUI();
-                        showView('app');
-                    } else {
-                        // FIX for "User doc not found" error
-                        console.warn("User doc not found. Creating a default user doc.");
-                        
-                        const defaultEmail = user.email || `${user.uid.substring(0, 5)}@example.com`;
-                        const defaultDisplayName = user.displayName || `User-${user.uid.substring(0, 5)}`;
-                        
-                        const newUserData = {
-                            displayName: defaultDisplayName,
-                            email: defaultEmail,
-                        };
-
-                        try {
-                            // Create the user document
-                            await setDoc(userRef, newUserData);
-                            
-                            // Now proceed as if the doc existed
-                            currentUserData = newUserData;
-                            allUsers.set(user.uid, currentUserData);
-                            console.log("Default user doc created. User logged in:", currentUserData.displayName);
-                            await initializeAppUI();
-                            showView('app');
-                            
-                        } catch (e) {
-                            console.error("Failed to create user doc! Logging out.", e);
-                            await handleLogout();
-                        }
-                    }
-                } else {
-                    currentUser = null;
-                    currentUserData = null;
-                    showView('auth');
-                    authForms.login.style.display = 'block';
-                    authForms.signup.style.display = 'none';
-                }
-            });
-
-            // Fallback sign-in for the environment
-            setTimeout(async () => {
-                if (auth.currentUser) return; // Already handled by onAuthStateChanged
-                try {
-                    if (typeof __initial_auth_token !== 'undefined') {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        console.log("No auth token, showing login screen.");
-                        showView('auth');
-                    }
-                } catch (e) {
-                    console.error("Error with fallback auth:", e);
-                    showView('auth'); // Show auth view if everything fails
-                }
-            }, 1000); // Wait 1s for standard auth to kick in
-        }
-
-        /**
-         * Handles user signup
-         */
-        async function handleSignup() {
-            clearAuthErrors();
-            // Add guard at the top (FIX for 'app' undefined)
-            if (!isFirebaseInitialized || !auth || !db) {
-                showAuthError('signup', 'Error: Services not connected. Please refresh.');
-                return;
-            }
-            
-            const email = $("signup-email").value.toLowerCase(); // Normalize email
-            const password = $("signup-password").value;
-            const displayName = $("signup-displayname").value.trim();
-
-            if (!email || !password || !displayName) {
-                showAuthError('signup', 'Please fill in all fields.');
-                return;
-            }
-            if (displayName.length > 20) {
-                 showAuthError('signup', 'Display name must be 20 characters or less.');
-                return;
-            }
-            
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                // Create user document in Firestore at `/artifacts/{appId}/users/{USER_ID}`
-                const userRef = doc(db, `/artifacts/${appId}/users/${user.uid}`);
-                await setDoc(userRef, {
-                    displayName: displayName,
-                    email: email, // Store normalized email
-                });
-                
-                // onAuthStateChanged will see the new user and call initializeAppUI
-                
-            } catch (error) {
-                console.error("Signup error:", error);
-                if (error.code === 'auth/email-already-in-use') {
-                    showAuthError('signup', 'That email is already taken. Try logging in.');
-                } else {
-                    showAuthError('signup', error.message);
-                }
-            }
-        }
-
-        /**
-         * Handles user login
-         */
-        async function handleLogin() {
-            clearAuthErrors();
-            // Add guard at the top (FIX for 'app' undefined)
-            if (!isFirebaseInitialized || !auth) {
-                showAuthError('login', 'Error: Services not connected. Please refresh.');
-                return;
-            }
-            
-            const email = $("login-email").value.toLowerCase(); // Normalize email
-            const password = $("login-password").value;
-
-            if (!email || !password) {
-                showAuthError('login', 'Please fill in all fields.');
-                return;
-            }
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged will handle switching the view
-            } catch (error) {
-                console.error("Login error:", error);
-                showAuthError('login', 'Invalid email or password.');
-            }
-        }
-
-        /**
-         * Handles user logout
-         */
-        async function handleLogout() {
-            if (currentMessageListener) {
-                currentMessageListener(); // Unsubscribe from old listener
-            }
-            currentChatContext = { type: null, id: null, name: null };
-            allUsers.clear();
-            if (auth) {
-                await signOut(auth);
-            }
-            showView('auth');
-        }
-
-        // --- APPLICATION UI & LOGIC ---
-
-        /**
-         * Sets up the main app UI after login
-         */
-        async function initializeAppUI() {
-            views.loading.style.display = 'none';
-            appUI.userPanelName.textContent = currentUserData.displayName;
-            appUI.userPanelEmail.textContent = currentUser.email;
-
-            // Load initial state
-            await loadDMs();
-            await loadServers();
-            selectDMsHome(); // Default to DM home screen
-        }
-
-        /**
-         * Loads and renders the user's server list
-         */
-        async function loadServers() {
-            const q = query(
-                collection(db, `/artifacts/${appId}/public/data/servers`),
-                where("members", "array-contains", currentUser.uid)
-            );
-            
-            const querySnapshot = await getDocs(q);
-            appUI.serverList.innerHTML = ''; // Clear list
-            querySnapshot.forEach((doc) => {
-                const server = doc.data();
-                const serverId = doc.id;
-                const serverInitial = server.name.substring(0, 2).toUpperCase();
-                
-                const btn = document.createElement('button');
-                btn.className = "h-12 w-12 bg-chat-gray-700 hover:bg-chat-blurple rounded-full flex items-center justify-center text-white text-lg font-bold transition-all duration-200 ease-in-out hover:rounded-2xl";
-                btn.textContent = serverInitial;
-                btn.title = server.name;
-                btn.onclick = () => selectServer(serverId, server.name);
-                appUI.serverList.appendChild(btn);
-            });
-        }
-
-        /**
-         * Loads and renders the user's DM list
-         */
-        async function loadDMs() {
-             const q = query(
-                collection(db, `/artifacts/${appId}/public/data/dm-rooms`),
-                where("members", "array-contains", currentUser.uid)
-            );
-            
-            // Use onSnapshot to auto-update DM list
-            onSnapshot(q, async (snapshot) => {
-                appUI.dmList.innerHTML = ''; // Clear list
-                if (snapshot.empty) {
-                    appUI.dmList.innerHTML = `<p class="px-2 py-1.5 text-chat-gray-500 text-sm">No DMs yet.</p>`;
-                    return;
-                }
-                
-                for (const doc of snapshot.docs) {
-                    const room = doc.data();
-                    const roomId = doc.id;
-                    
-                    const otherUid = room.members.find(uid => uid !== currentUser.uid);
-                    if (!otherUid) continue; 
-                    
-                    const otherUser = await getUserData(otherUid);
-                    
-                    const el = document.createElement('a');
-                    el.href = "#";
-                    el.className = "group flex items-center px-2 py-1.5 text-chat-gray-400 hover:text-white hover:bg-chat-gray-700 rounded-md";
-                    el.innerHTML = `
-                        <img src="https://placehold.co/32x32/72767D/FFFFFF?text=${otherUser.displayName.charAt(0)}" alt="Avatar" class="rounded-full w-8 h-8 mr-2">
-                        <span class="font-medium">${otherUser.displayName}</span>
-                    `;
-                    el.onclick = (e) => {
-                        e.preventDefault();
-                        selectDM(roomId, otherUser.displayName, [currentUser.uid, otherUid]);
-                    };
-                    appUI.dmList.appendChild(el);
-                }
-            }, (error) => {
-                console.error("Error loading DMs:", error);
-                // This will fail if the required index is not present
-                appUI.dmList.innerHTML = `<p class="px-2 py-1.5 text-chat-red text-sm">Error loading DMs. DB rules may need setup.</p>`;
-            });
-        }
-
-        /**
-         * Selects the DM home screen
-         */
-        function selectDMsHome() {
-            currentChatContext = { type: null, id: null, name: null };
-            if (currentMessageListener) currentMessageListener();
-            
-            appUI.channelListHeader.textContent = "Direct Messages";
-            appUI.dmListView.style.display = 'block';
-            appUI.channelListView.style.display = 'none';
-            appUI.userListAside.classList.add('hidden');
-            appUI.chatHeaderName.textContent = "Select a chat";
-            appUI.messagesList.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-chat-gray-500">Select a DM to start chatting.</p></div>`;
-            appUI.chatInputFooter.style.display = 'none';
-        }
-
-        /**
-         * Selects a server to view
-         * @param {string} serverId 
-         * @param {string} serverName 
-         */
-        async function selectServer(serverId, serverName) {
-            console.log(`Selecting server: ${serverName} (${serverId})`);
-            appUI.channelListHeader.textContent = serverName;
-            appUI.dmListView.style.display = 'none';
-            appUI.channelListView.style.display = 'block';
-
-            // For simplicity, we only have a 'general' channel.
-            const channelId = 'general';
-            const channelName = 'general';
-            
-            currentChatContext = { type: 'server', id: serverId, channelId: channelId, name: serverName };
-            appUI.chatHeaderName.textContent = `#${channelName}`;
-            appUI.messageInput.placeholder = `Message #${channelName}`;
-            appUI.chatInputFooter.style.display = 'block';
-            
-            // Load messages
-            loadMessages();
-            
-            // Load user list
-            const serverRef = doc(db, `/artifacts/${appId}/public/data/servers/${serverId}`);
-            const serverSnap = await getDoc(serverRef);
-            if(serverSnap.exists()) {
-                const members = serverSnap.data().members || [];
-                // Check member limit (max 50)
-                if (members.length >= 50) {
-                    // This is just a visual cue, real logic should be on join
-                    appUI.userListHeader.textContent = `Members — ${members.length} (Full)`;
-                } else {
-                    appUI.userListHeader.textContent = `Members — ${members.length}`;
-                }
-                await renderUserList(members);
-                appUI.userListAside.classList.remove('hidden');
-            }
-        }
-        
-        /**
-         * Selects a DM to view
-         * @param {string} roomId 
-         * @param {string} userName 
-         * @param {string[]} members 
-         */
-        async function selectDM(roomId, userName, members) {
-            console.log(`Selecting DM with: ${userName} (${roomId})`);
-            currentChatContext = { type: 'dm', id: roomId, name: userName };
-            
-            appUI.channelListHeader.textContent = "Direct Messages";
-            appUI.dmListView.style.display = 'block';
-            appUI.channelListView.style.display = 'none';
-
-            appUI.chatHeaderName.textContent = userName;
-            appUI.messageInput.placeholder = `Message @${userName}`;
-            appUI.chatInputFooter.style.display = 'block';
-            
-            loadMessages();
-            
-            // Show just the two users in the "user list"
-            appUI.userListHeader.textContent = `Conversation`;
-            await renderUserList(members);
-            appUI.userListAside.classList.remove('hidden');
-        }
-        
-        /**
-         * Renders a list of user UIDs in the user list panel
-         * @param {string[]} uids 
-         */
-        async function renderUserList(uids) {
-            appUI.userList.innerHTML = '';
-            for (const uid of uids) {
-                const user = await getUserData(uid);
-                const el = document.createElement('div');
-                el.className = 'flex items-center space-x-2';
-                el.innerHTML = `
-                    <div class="relative">
-                        <img src="https://placehold.co/32x32/72767D/FFFFFF?text=${user.displayName.charAt(0)}" alt="Avatar" class="rounded-full w-8 h-8">
-                    </div>
-                    <span class="text-white font-medium text-sm">${user.displayName}</span>
-                `;
-                appUI.userList.appendChild(el);
-            }
-        }
-
-        /**
-         * Creates a new server
-         */
-        async function createServer() {
-            const serverName = modals.serverNameInput.value.trim();
-            if (!serverName) return;
-            
-            // Note: A real member limit check would happen when people
-            // *join* a server, not when one is created.
-            
-            try {
-                // Create the server
-                const serverRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/servers`), {
-                    name: serverName,
-                    ownerId: currentUser.uid,
-                    members: [currentUser.uid] // Add owner as first member
-                });
-                
-                // Create the default 'general' channel
-                const channelRef = doc(db, `/artifacts/${appId}/public/data/servers/${serverRef.id}/channels/general`);
-                await setDoc(channelRef, {
-                    name: "general"
-                });
-                
-                console.log("Server created:", serverRef.id);
-                toggleModal(modals.addServer, false);
-                modals.serverNameInput.value = '';
-                await loadServers(); // Reload server list
-                selectServer(serverRef.id, serverName); // Auto-select the new server
-                
-            } catch (e) {
-                console.error("Error creating server:", e);
-                // This can fail if database rules aren't set
-                showAuthError('login', 'Error: Could not create server. Check DB rules.');
-            }
-        }
-        
-        /**
-         * Finds a user and starts a new DM
-         */
-        async function startDM() {
-            clearAuthErrors();
-            const email = modals.dmEmailInput.value.trim().toLowerCase(); // Normalize
-            if (!email) {
-                showAuthError('dm', 'Please enter an email.');
-                return;
-            }
-            if (email === currentUser.email) {
-                showAuthError('dm', "You can't DM yourself.");
-                return;
-            }
-            
-            try {
-                // Find user by email
-                // This requires a Firestore index on `email` in the `users` collection
-                const q = query(collection(db, `/artifacts/${appId}/users`), where("email", "==", email));
-                const userSnap = await getDocs(q);
-                
-                if (userSnap.empty) {
-                    showAuthError('dm', 'User not found. (Note: Email is case-sensitive)');
-                    return;
-                }
-                
-                const otherUserDoc = userSnap.docs[0];
-                const otherUid = otherUserDoc.id;
-                const otherUserData = otherUserDoc.data();
-                
-                // Create a unique room ID
-                const members = [currentUser.uid, otherUid].sort();
-                const roomId = members.join('_');
-                
-                // Check if room already exists
-                const roomRef = doc(db, `/artifacts/${appId}/public/data/dm-rooms/${roomId}`);
-                const roomSnap = await getDoc(roomRef);
-                
-                if (!roomSnap.exists()) {
-                    // Create new DM room
-                    await setDoc(roomRef, {
-                        members: members,
-                        createdAt: serverTimestamp()
-                    });
-                }
-                
-                toggleModal(modals.startDm, false);
-                modals.dmEmailInput.value = '';
-                
-                // `loadDMs` snapshot will automatically pick up the new room.
-                selectDM(roomId, otherUserData.displayName, members);
-                
-            } catch (e) {
-                console.error("Error starting DM:", e);
-                // This error likely means the Firestore Index is missing.
-                showAuthError('dm', 'Could not find user. (This feature may require database setup.)');
-            }
-        }
-
-        // --- CHAT MESSAGES ---
-
-        /**
-         * Loads and displays messages for the current context
-         */
-        function loadMessages() {
-            if (currentMessageListener) {
-                currentMessageListener(); // Unsubscribe from old listener
-            }
-            if (!currentChatContext.type) return;
-
-            let q;
-            if (currentChatContext.type === 'server') {
-                q = query(collection(db, `/artifacts/${appId}/public/data/servers/${currentChatContext.id}/channels/${currentChatContext.channelId}/messages`));
-            } else { // 'dm'
-                q = query(collection(db, `/artifacts/${appId}/public/data/dm-rooms/${currentChatContext.id}/messages`));
-            }
-            
-            appUI.messagesList.innerHTML = ''; // Clear messages
-
-            currentMessageListener = onSnapshot(q, async (snapshot) => {
-                const sortedMessages = snapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(m => m.timestamp) // Ensure message has timestamp
-                    .sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
-                
-                appUI.messagesList.innerHTML = ''; // Clear messages
-                if (sortedMessages.length === 0) {
-                     appUI.messagesList.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-chat-gray-500">No messages yet. Say hi!</p></div>`;
-                     return;
-                }
-
-                for (const msg of sortedMessages) {
-                    const sender = await getUserData(msg.uid);
-                    const el = createMessageElement(msg, sender);
-                    appUI.messagesList.appendChild(el);
-                }
-                
-                // Scroll to bottom
-                appUI.messagesList.scrollTop = appUI.messagesList.scrollHeight;
-            }, (error) => {
-                console.error("Error loading messages: ", error);
-                appUI.messagesList.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-chat-red">Could not load messages. Check database rules.</p></div>`;
-            });
-        }
-        
-        /**
-         * Scans for @pings and returns highlighted HTML
-         * @param {string} text 
-         */
-        function highlightPings(text) {
-            // Prevent HTML injection by escaping
-            const esc = (str) => str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
-            const escapedText = esc(text);
-
-            return escapedText.replace(/@(\w+)/g, (match, displayName) => {
-                let found = false;
-                for (const user of allUsers.values()) {
-                    if (user.displayName === displayName) {
-                        found = true;
-                        break;
-                    }
-                }
-                
-                if (found) {
-                    return `<span class="bg-chat-blurple bg-opacity-50 text-white font-medium rounded px-1">${match}</span>`;
-                } else {
-                    return match; // Not a valid user
-                }
-            });
-        }
-
-        /**
-         * Creates an HTML element for a single message
-         * @param {object} msg 
-         * @param {object} sender 
-         */
-        function createMessageElement(msg, sender) {
-            const el = document.createElement('div');
-            el.className = 'flex items-start space-x-4';
-            
-            const highlightedText = highlightPings(msg.text);
-            
-            let fileHTML = '';
-            if (msg.fileUrl) {
-                const esc = (str) => str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
-                const fileName = esc(msg.fileName || 'Attached File');
-                
-                fileHTML = `
-                    <a href="${esc(msg.fileUrl)}" target="_blank" class="mt-2 flex items-center p-2 bg-chat-gray-800 rounded-md max-w-xs">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-chat-gray-400 mr-2 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94a3 3 0 114.243 4.242l-9.086 9.086a1.5 1.5 0 01-2.121-2.121l7.693-7.693-2.121-2.121z" /></svg>
-                        <span class="text-blue-400 hover:underline truncate">${fileName}</span>
-                    </a>
-                `;
-            }
-
-            el.innerHTML = `
-                <img src="https://placehold.co/40x40/72767D/FFFFFF?text=${sender.displayName.charAt(0)}" alt="Avatar" class="rounded-full w-10 h-10 mt-1">
-                <div>
-                    <div class="flex items-baseline space-x-2">
-                        <h4 class="text-white font-semibold">${sender.displayName}</h4>
-                        <span class="text-chat-gray-500 text-xs">${formatTimestamp(msg.timestamp)}</span>
-                    </div>
-                    <p class="text-white">${highlightedText}</p>
-                    ${fileHTML}
-                </div>
-            `;
-            return el;
-        }
-
-        /**
-         * Sends a new message to the current chat
-         */
-        async function sendMessage(fileData = null) {
-            const text = appUI.messageInput.value.trim();
-            if (!text && !fileData) return;
-            
-            if (!currentChatContext.type) {
-                console.error("No chat context selected.");
-                return;
-            }
-            
-            appUI.messageInput.value = ''; // Clear input immediately
-            
-            let messageCollectionRef;
-            if (currentChatContext.type === 'server') {
-                messageCollectionRef = collection(db, `/artifacts/${appId}/public/data/servers/${currentChatContext.id}/channels/${currentChatContext.channelId}/messages`);
-            } else { // 'dm'
-                messageCollectionRef = collection(db, `/artifacts/${appId}/public/data/dm-rooms/${currentChatContext.id}/messages`);
-            }
-            
-            const messageData = {
-                text: text,
-                uid: currentUser.uid,
-                timestamp: serverTimestamp()
-            };
-            
-            if (fileData) {
-                messageData.fileUrl = fileData.url;
-                messageData.fileName = fileData.name;
-            }
-            
-            try {
-                await addDoc(messageCollectionRef, messageData);
-            } catch (e) {
-                console.error("Error sending message:", e);
-                // Put message back in input on failure?
-                appUI.messageInput.value = text;
-            }
-        }
-        
-        /**
-         * Handles file selection and upload
-         */
-        async function handleFileUpload() {
-            const file = appUI.fileUploadInput.files[0];
-            if (!file) return;
-            
-            // Max file size: 5MB
-            if (file.size > 5 * 1024 * 1024) {
-                alert("File is too large (max 5MB).");
-                return;
-            }
-            
-            const storagePath = `files/${appId}/${currentUser.uid}/${Date.now()}_${file.name}`;
-            const storageRef = ref(storage, storagePath);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            
-            const progressEl = appUI.fileUploadProgress;
-            const progressSpan = progressEl.querySelector('span');
-            progressEl.classList.remove('hidden');
-            
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    progressSpan.textContent = Math.round(progress);
-                },
-                (error) => {
-                    console.error("Upload error:", error);
-                    progressEl.classList.add('hidden');
-                    alert("File upload failed.");
-                },
-                async () => {
-                    // Upload complete
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    progressEl.classList.add('hidden');
-                    appUI.fileUploadInput.value = null; // Clear file input
-                    
-                    // Send message with file
-                    await sendMessage({ url: downloadURL, name: file.name });
-                }
-            );
-        }
-
-        // --- EVENT LISTENERS ---
-        function setupEventListeners() {
-            // Auth
-            $("show-signup-btn").onclick = () => { authForms.login.style.display = 'none'; authForms.signup.style.display = 'block'; clearAuthErrors(); };
-            $("show-login-btn").onclick = () => { authForms.login.style.display = 'block'; authForms.signup.style.display = 'none'; clearAuthErrors(); };
-            $("login-btn").onclick = handleLogin;
-            $("signup-btn").onclick = handleSignup;
-            appUI.logoutBtn.onclick = handleLogout;
-            
-            // Modals
-            appUI.addServerBtn.onclick = () => toggleModal(modals.addServer, true);
-            modals.cancelAddServerBtn.onclick = () => toggleModal(modals.addServer, false);
-            modals.confirmAddServerBtn.onclick = createServer;
-            
-            appUI.startDmBtn.onclick = () => toggleModal(modals.startDm, true);
-            modals.cancelStartDmBtn.onclick = () => toggleModal(modals.startDm, false);
-            modals.confirmStartDmBtn.onclick = startDM;
-            
-            // App UI
-            appUI.dmHomeBtn.onclick = selectDMsHome;
-            
-            // Chat
-            appUI.sendBtn.onclick = () => sendMessage(null);
-            appUI.messageInput.onkeydown = (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage(null);
-                }
-            };
-            appUI.fileUploadBtn.onclick = () => appUI.fileUploadInput.click();
-            appUI.fileUploadInput.onchange = handleFileUpload;
-        }
-
-        // --- START THE APP ---
-        setupEventListeners();
-        main();
-
-    </script>
+  </div>
 </body>
 </html>
