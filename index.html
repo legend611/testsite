@@ -2800,7 +2800,7 @@ async function openUserSearchModal() {
                     .update({ custom_ping_sound: e.target.result })
                     .eq('username', currentUser.username);
 
-                showNotification('Custom ping sound uploaded!', 'success');
+                showNotification('success');
             };
             reader.readAsDataURL(file);
         }
